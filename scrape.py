@@ -10,11 +10,14 @@ naam) in plaats van in de code.
 
 We zoeken elke run opnieuw de teamcode op (stabieler dan poulecode, die
 halverwege het seizoen wisselt als de KNVB een nieuwe competitiefase
-indeelt) en halen daarmee het per-team programma op. Alles wordt
-bijgehouden in matches.json zodat wedstrijden niet verdwijnen zodra een
-fase/poule wisselt. Daarna wordt matches.ics gegenereerd voor abonnement
-in Google Calendar. In tegenstelling tot de JO14-6-variant worden hier
-geen aparte "Verzamelen"-items aangemaakt.
+indeelt) en halen daarmee het per-team programma op. Per wedstrijd wordt
+ook het adres van de accommodatie opgehaald (wedstrijd-informatie) zodat
+de LOCATION een kant-en-klare Google Maps-link krijgt, in plaats van te
+gokken op basis van de sportparknaam. Alles wordt bijgehouden in
+matches.json zodat wedstrijden niet verdwijnen zodra een fase/poule
+wisselt. Daarna wordt matches.ics gegenereerd voor abonnement in Google
+Calendar. In tegenstelling tot de JO14-6-variant worden hier geen aparte
+"Verzamelen"-items aangemaakt.
 """
 import json
 import os
@@ -57,6 +60,26 @@ def fetch_schedule(teamcode: int) -> list[dict]:
     return api_get("programma", teamcode=teamcode, aantaldagen=365, aantalregels=200, eigenwedstrijden="JA")
 
 
+def fetch_accommodatie(wedstrijdcode: int) -> dict:
+    """Haalt het exacte adres op voor een wedstrijd. Betrouwbaarder dan zelf
+    raden op basis van de sportparknaam."""
+    try:
+        info = api_get("wedstrijd-informatie", wedstrijdcode=wedstrijdcode)
+        return info.get("accommodatie") or {}
+    except (urllib.error.URLError, KeyError, ValueError):
+        return {}
+
+
+def maps_url(naam: str, straat: str, plaats: str) -> str:
+    # Bij voorkeur het exacte adres (straat + postcode/plaats); zonder dat
+    # valt terug op de sportparknaam -- dan is het inderdaad een beetje
+    # gissen, maar beter dan geen link.
+    query = ", ".join(p for p in [straat, plaats] if p) or naam
+    if not query:
+        return ""
+    return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(query)
+
+
 def load_state() -> dict:
     if STATE_PATH.exists():
         return json.loads(STATE_PATH.read_text())
@@ -70,6 +93,7 @@ def save_state(state: dict) -> None:
 def merge(state: dict, matches: list[dict], now_iso: str) -> dict:
     for m in matches:
         uid = str(m["wedstrijdcode"])
+        accommodatie = fetch_accommodatie(m["wedstrijdcode"])
         entry = state.get(uid, {})
         entry.update(
             {
@@ -79,6 +103,8 @@ def merge(state: dict, matches: list[dict], now_iso: str) -> dict:
                 "accommodatie": m.get("accommodatie") or "",
                 "veld": m.get("veld") or "",
                 "plaats": m.get("plaats") or "",
+                "straat": accommodatie.get("straat") or "",
+                "adresplaats": accommodatie.get("plaats") or "",
                 "status": m.get("status") or "",
                 "wedstrijdnummer": m.get("wedstrijdnummer") or "",
                 "scheidsrechter": m.get("scheidsrechter") or "",
@@ -94,7 +120,7 @@ def ics_escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
 
-def vevent(uid: str, dtstamp: str, start: datetime, end: datetime, summary: str, location: str = "", description: str = "", cancelled: bool = False) -> list[str]:
+def vevent(uid: str, dtstamp: str, start: datetime, end: datetime, summary: str, location: str = "", description: str = "", url: str = "", cancelled: bool = False) -> list[str]:
     lines = [
         "BEGIN:VEVENT",
         f"UID:{uid}",
@@ -107,6 +133,8 @@ def vevent(uid: str, dtstamp: str, start: datetime, end: datetime, summary: str,
         lines.append(f"LOCATION:{ics_escape(location)}")
     if description:
         lines.append(f"DESCRIPTION:{ics_escape(description)}")
+    if url:
+        lines.append(f"URL:{url}")
     if cancelled:
         lines.append("STATUS:CANCELLED")
     lines.append("END:VEVENT")
@@ -130,6 +158,7 @@ def build_ics(state: dict, now: datetime) -> str:
 
         cancelled = bool(entry["status"]) and "afgelast" in entry["status"].lower()
         location = ", ".join(p for p in [entry["accommodatie"], entry["veld"], entry["plaats"]] if p)
+        match_maps_url = maps_url(entry["accommodatie"], entry["straat"], entry["adresplaats"])
         summary = f"{entry['thuisteam']} - {entry['uitteam']}"
         if cancelled:
             summary = f"AFGELAST: {summary}"
@@ -138,6 +167,7 @@ def build_ics(state: dict, now: datetime) -> str:
             f"Status: {entry['status']}" if entry["status"] else "",
             f"Scheidsrechter: {entry['scheidsrechter']}" if entry["scheidsrechter"] else "",
             f"Wedstrijdnummer: {entry['wedstrijdnummer']}" if entry["wedstrijdnummer"] else "",
+            f"Route: {match_maps_url}" if match_maps_url else "",
         ]
         description = "\n".join(p for p in desc_parts if p)
 
@@ -149,6 +179,7 @@ def build_ics(state: dict, now: datetime) -> str:
             summary=summary,
             location=location,
             description=description,
+            url=match_maps_url,
             cancelled=cancelled,
         )
 
