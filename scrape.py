@@ -34,6 +34,20 @@ CLIENT_ID = os.environ.get("SPORTLINK_CLIENT_ID")
 TEAM_NAME = "VVZ '49 45+1"
 UID_NAMESPACE = "vvz49-45plus1"
 
+# De KNVB noemt VVZ'49's accommodatie "Sportpark Zonnegloren", maar Google
+# Maps/Calendar herkent de plek -- met foto en kaartje -- pas onder de
+# officiele clubnaam.
+THUIS_ACCOMMODATIE_KNVB = "Sportpark Zonnegloren"
+THUIS_CLUBNAAM = "Sportvereniging Vrienden van Zonnegloren"
+
+
+def display_accommodatie(naam: str) -> str:
+    """Vervangt de KNVB-naam van VVZ'49's eigen accommodatie door de naam
+    zoals Google Maps 'm herkent. Voor andere sportparken (uitwedstrijden)
+    blijft de KNVB-naam staan -- daar is geen betrouwbare 1-op-1 vertaling
+    van bekend."""
+    return THUIS_CLUBNAAM if naam == THUIS_ACCOMMODATIE_KNVB else naam
+
 TZ_AMS = ZoneInfo("Europe/Amsterdam")
 
 STATE_PATH = Path(__file__).parent / "matches.json"
@@ -157,8 +171,9 @@ def build_ics(state: dict, now: datetime) -> str:
             continue
 
         cancelled = bool(entry["status"]) and "afgelast" in entry["status"].lower()
-        location = ", ".join(p for p in [entry["accommodatie"], entry["veld"], entry["plaats"]] if p)
-        match_maps_url = maps_url(entry["accommodatie"], entry["straat"], entry["adresplaats"])
+        accommodatie_display = display_accommodatie(entry["accommodatie"])
+        location = ", ".join(p for p in [accommodatie_display, entry["veld"], entry["plaats"]] if p)
+        match_maps_url = maps_url(accommodatie_display, entry["straat"], entry["adresplaats"])
         summary = f"{entry['thuisteam']} - {entry['uitteam']}"
         if cancelled:
             summary = f"AFGELAST: {summary}"
