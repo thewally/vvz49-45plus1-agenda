@@ -52,18 +52,3 @@ Outlook ververst geabonneerde agenda's doorgaans eens per dag.
 1. Ga naar **Instellingen** → **Agenda** → **Accounts** → **Account toevoegen** → **Overige**
 2. Kies **Voeg agenda-abonnement toe**
 3. Vul bij **Server** de URL in en tik op **Volgende**, dan op **Bewaar**
-
-## Achtergrond
-
-Geen betaalde Voetbal.nl-app nodig: dit gebruikt de publieke widget-API
-die VVZ'49's eigen website ook gebruikt om standen en programma te tonen.
-Zie `scrape.py` voor details.
-
-De Sportlink-widget `client_id` staat in de repository secret
-`SPORTLINK_CLIENT_ID` (lokaal: zet 'm in de gelijknamige omgevingsvariabele)
--- niet in de code.
-
-## Beperkingen
-
-- Zoekt elke run automatisch de actuele teamcode/poule op, dus werkt door
-  wanneer de KNVB halverwege het seizoen een nieuwe competitiefase indeelt.
