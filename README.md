@@ -3,9 +3,6 @@
 Automatisch bijgewerkte agenda-feed (.ics) voor **VVZ '49 45+1** (7x7),
 voor gebruik als abonnement in Google Calendar (of Apple/Outlook).
 
-Fork van [vvz49-jo14-6-agenda](https://github.com/thewally/vvz49-jo14-6-agenda),
-zonder de "Verzamelen"-items.
-
 ## Wat staat er in de agenda
 
 - **Speeltijden**
