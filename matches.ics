@@ -5,120 +5,120 @@ CALSCALE:GREGORIAN
 X-WR-CALNAME:VVZ '49 45+1
 BEGIN:VEVENT
 UID:21043667@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20260918T173000Z
 DTEND:20260918T190000Z
-SUMMARY:Baarn sv 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Baarn sv 45+1 (45+ 7x7)
 LOCATION:Sportpark De Ebbenhorst
 DESCRIPTION:Status: Te spelen\nVeld: veld B B\nPlaats: NIJKERK\nWedstrijdnummer: 81726\nRoute: https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 URL:https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 END:VEVENT
 BEGIN:VEVENT
 UID:21043665@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20260918T180000Z
 DTEND:20260918T193000Z
-SUMMARY:VVZ '49 45+1 - Sparta Nijkerk 45+1
+SUMMARY:[THUIS] Sparta Nijkerk 45+1 (45+ 7x7)
 LOCATION:Sportpark De Ebbenhorst
 DESCRIPTION:Status: Te spelen\nVeld: veld B A\nPlaats: NIJKERK\nWedstrijdnummer: 81724\nRoute: https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 URL:https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 END:VEVENT
 BEGIN:VEVENT
 UID:21043664@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20260918T183000Z
 DTEND:20260918T200000Z
-SUMMARY:Soest SO 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Soest SO 45+1 (45+ 7x7)
 LOCATION:Sportpark De Ebbenhorst
 DESCRIPTION:Status: Te spelen\nVeld: veld B B\nPlaats: NIJKERK\nWedstrijdnummer: 81723\nRoute: https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 URL:https://www.google.com/maps/search/?api=1&query=Nachtegaalsteeg%201%2C%203862WJ%20NIJKERK
 END:VEVENT
 BEGIN:VEVENT
 UID:21043652@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261002T174500Z
 DTEND:20261002T191500Z
-SUMMARY:Soest SO 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Soest SO 45+1 (45+ 7x7)
 LOCATION:Sportpark Ter Eem
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 hoofdveld BAARN SV B\nPlaats: BAARN\nWedstrijdnummer: 81711\nRoute: https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 URL:https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 END:VEVENT
 BEGIN:VEVENT
 UID:21043651@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261002T181500Z
 DTEND:20261002T194500Z
-SUMMARY:VVZ '49 45+1 - Baarn sv 45+1
+SUMMARY:[THUIS] Baarn sv 45+1 (45+ 7x7)
 LOCATION:Sportpark Ter Eem
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 hoofdveld BAARN SV A\nPlaats: BAARN\nWedstrijdnummer: 81710\nRoute: https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 URL:https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 END:VEVENT
 BEGIN:VEVENT
 UID:21043650@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261002T184500Z
 DTEND:20261002T201500Z
-SUMMARY:Sparta Nijkerk 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Sparta Nijkerk 45+1 (45+ 7x7)
 LOCATION:Sportpark Ter Eem
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 hoofdveld BAARN SV B\nPlaats: BAARN\nWedstrijdnummer: 81709\nRoute: https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 URL:https://www.google.com/maps/search/?api=1&query=de%20Geerenweg%206%2C%203741RS%20BAARN
 END:VEVENT
 BEGIN:VEVENT
 UID:21043661@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261030T190000Z
 DTEND:20261030T203000Z
-SUMMARY:VVZ '49 45+1 - Sparta Nijkerk 45+1
+SUMMARY:[THUIS] Sparta Nijkerk 45+1 (45+ 7x7)
 LOCATION:Sportvereniging Vrienden van Zonnegloren
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 A\nPlaats: SOEST\nWedstrijdnummer: 81720\nRoute: https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 END:VEVENT
 BEGIN:VEVENT
 UID:21043656@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261030T200000Z
 DTEND:20261030T213000Z
-SUMMARY:Soest SO 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Soest SO 45+1 (45+ 7x7)
 LOCATION:Sportvereniging Vrienden van Zonnegloren
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 A\nPlaats: SOEST\nWedstrijdnummer: 81715\nRoute: https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 END:VEVENT
 BEGIN:VEVENT
 UID:21043659@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261030T210000Z
 DTEND:20261030T223000Z
-SUMMARY:VVZ '49 45+1 - Baarn sv 45+1
+SUMMARY:[THUIS] Baarn sv 45+1 (45+ 7x7)
 LOCATION:Sportvereniging Vrienden van Zonnegloren
 DESCRIPTION:Status: Te spelen\nVeld: veld 4 A\nPlaats: SOEST\nWedstrijdnummer: 81718\nRoute: https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Eemweg%201%2C%203764DG%20SOEST
 END:VEVENT
 BEGIN:VEVENT
 UID:21043649@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261113T190000Z
 DTEND:20261113T203000Z
-SUMMARY:Baarn sv 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Baarn sv 45+1 (45+ 7x7)
 LOCATION:Sportpark Bosstraat-Oost
 DESCRIPTION:Status: Te spelen\nVeld: veld 1-SO Soest B\nPlaats: SOEST\nWedstrijdnummer: 81708\nRoute: https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
 END:VEVENT
 BEGIN:VEVENT
 UID:21043644@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261113T193000Z
 DTEND:20261113T210000Z
-SUMMARY:VVZ '49 45+1 - Soest SO 45+1
+SUMMARY:[THUIS] Soest SO 45+1 (45+ 7x7)
 LOCATION:Sportpark Bosstraat-Oost
 DESCRIPTION:Status: Te spelen\nVeld: veld 1-SO Soest A\nPlaats: SOEST\nWedstrijdnummer: 81703\nRoute: https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
 END:VEVENT
 BEGIN:VEVENT
 UID:21043645@vvz49-45plus1
-DTSTAMP:20260918T091559Z
+DTSTAMP:20260918T110148Z
 DTSTART:20261113T200000Z
 DTEND:20261113T213000Z
-SUMMARY:Sparta Nijkerk 45+1 - VVZ '49 45+1
+SUMMARY:[UIT] Sparta Nijkerk 45+1 (45+ 7x7)
 LOCATION:Sportpark Bosstraat-Oost
 DESCRIPTION:Status: Te spelen\nVeld: veld 1-SO Soest B\nPlaats: SOEST\nWedstrijdnummer: 81704\nRoute: https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
 URL:https://www.google.com/maps/search/?api=1&query=Bosstraat%20137%2C%203766AE%20SOEST
