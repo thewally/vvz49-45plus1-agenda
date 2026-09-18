@@ -39,6 +39,9 @@ CLIENT_ID = os.environ.get("SPORTLINK_CLIENT_ID")
 TEAM_NAME = "VVZ '49 45+1"
 UID_NAMESPACE = "vvz49-45plus1"
 
+# Label achter de wedstrijdtitel, bv. "[UIT] Sparta Nijkerk 45+1 (45+ 7x7)".
+AGENDA_LABEL = "45+ 7x7"
+
 # De KNVB noemt VVZ'49's accommodatie "Sportpark Zonnegloren", maar Google
 # Maps/Calendar herkent de plek -- met foto en kaartje -- pas onder de
 # officiele clubnaam.
@@ -289,7 +292,14 @@ def build_ics(state: dict, activiteiten: list[dict], now: datetime) -> str:
         accommodatie_display = display_accommodatie(entry["accommodatie"])
         location = accommodatie_display
         match_maps_url = maps_url(accommodatie_display, entry["straat"], entry["adresplaats"])
-        summary = f"{entry['thuisteam']} - {entry['uitteam']}"
+
+        # Titel toont alleen richting + tegenstander, bv. "[UIT] Sparta
+        # Nijkerk 45+1 (45+ 7x7)" -- de eigen teamnaam staat al in de
+        # agenda-titel zelf.
+        is_thuis = entry["thuisteam"] == TEAM_NAME
+        richting = "THUIS" if is_thuis else "UIT"
+        tegenstander = entry["uitteam"] if is_thuis else entry["thuisteam"]
+        summary = f"[{richting}] {tegenstander} ({AGENDA_LABEL})"
         if cancelled:
             summary = f"AFGELAST: {summary}"
 
