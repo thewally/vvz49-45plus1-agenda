@@ -18,6 +18,13 @@ matches.json zodat wedstrijden niet verdwijnen zodra een fase/poule
 wisselt. In tegenstelling tot de JO14-6-variant worden hier geen aparte
 "Verzamelen"-items aangemaakt.
 
+Voor VVZ'49's eigen accommodatie wordt in het LOCATION-veld altijd het
+volledige, exacte adres gebruikt (THUIS_ADRES_VOLLEDIG) -- dat is wat
+Google Calendar (en vermoedelijk andere clients) nodig heeft om er een
+kaartje/foto bij te tonen. Sub-locatie-aanduidingen (bv. "Hoofdveld")
+horen dus niet in het LOCATION-veld, maar worden in de titel getoond --
+zie het optionele "sublocatie"-veld in overige-activiteiten.json.
+
 Daarnaast worden handmatig bijgehouden activiteiten (trainingen,
 toernooien, teamuitjes, ...) uit overige-activiteiten.json toegevoegd.
 Zie README.md voor het formaat. Daarna wordt matches.ics gegenereerd voor
@@ -44,9 +51,12 @@ AGENDA_LABEL = "45+ 7x7"
 
 # De KNVB noemt VVZ'49's accommodatie "Sportpark Zonnegloren", maar Google
 # Maps/Calendar herkent de plek -- met foto en kaartje -- pas onder de
-# officiele clubnaam.
+# officiele clubnaam en het exacte adres.
 THUIS_ACCOMMODATIE_KNVB = "Sportpark Zonnegloren"
 THUIS_CLUBNAAM = "Sportvereniging Vrienden van Zonnegloren"
+THUIS_STRAAT = "Eemweg 2D"
+THUIS_PLAATS = "3764 DG Soest"
+THUIS_ADRES_VOLLEDIG = f"{THUIS_CLUBNAAM} {THUIS_STRAAT}, {THUIS_PLAATS}, Nederland"
 
 
 def display_accommodatie(naam: str) -> str:
@@ -171,6 +181,26 @@ def load_activiteiten() -> list[dict]:
     return data
 
 
+def activiteit_locatie(act: dict) -> tuple[str, str]:
+    """Bepaalt LOCATION en route-URL voor een overige activiteit. Voor
+    VVZ'49's eigen accommodatie wordt altijd het exacte, volledige adres
+    gebruikt (voor de kaart/foto-herkenning); de sub-locatie (zie
+    activiteit_titel) hoort daar niet bij."""
+    locatie_naam = act.get("locatie") or ""
+    adres = act.get("adres") or ""
+    if locatie_naam == THUIS_CLUBNAAM:
+        return THUIS_ADRES_VOLLEDIG, act.get("url") or THUIS_MAPS_URL
+    locatie = ", ".join(p for p in [locatie_naam, adres] if p)
+    url = act.get("url") or maps_url(locatie_naam, adres, "")
+    return locatie, url
+
+
+def activiteit_titel(act: dict, afgelast: bool) -> str:
+    sublocatie = act.get("sublocatie") or ""
+    titel = f"{act['titel']} ({sublocatie})" if sublocatie else act["titel"]
+    return f"AFGELAST: {titel}" if afgelast else titel
+
+
 def activiteit_events(act: dict, dtstamp: str, cutoff: date, horizon: date) -> list[str]:
     act_id = act["id"]
     try:
@@ -200,10 +230,8 @@ def activiteit_events(act: dict, dtstamp: str, cutoff: date, horizon: date) -> l
         raise fout(f"activiteit '{act_id}': 'herhalen_tot' ligt voor 'datum'")
 
     afgelast = bool(act.get("afgelast"))
-    summary = f"AFGELAST: {act['titel']}" if afgelast else act["titel"]
-    adres = act.get("adres") or ""
-    locatie = ", ".join(p for p in [act.get("locatie") or "", adres] if p)
-    url = act.get("url") or maps_url(act.get("locatie") or "", adres, "")
+    summary = activiteit_titel(act, afgelast)
+    locatie, url = activiteit_locatie(act)
     description = "\n".join(p for p in [act.get("omschrijving") or "", f"Route: {url}" if url else ""] if p)
 
     lines: list[str] = []
@@ -272,6 +300,9 @@ def vevent(uid: str, dtstamp: str, start: date, end: date, summary: str, locatio
     return lines
 
 
+THUIS_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
+
+
 def build_ics(state: dict, activiteiten: list[dict], now: datetime) -> str:
     cutoff = (now - timedelta(days=60)).date()
     horizon = (now + timedelta(days=365)).date()
@@ -290,8 +321,12 @@ def build_ics(state: dict, activiteiten: list[dict], now: datetime) -> str:
 
         cancelled = bool(entry["status"]) and "afgelast" in entry["status"].lower()
         accommodatie_display = display_accommodatie(entry["accommodatie"])
-        location = accommodatie_display
-        match_maps_url = maps_url(accommodatie_display, entry["straat"], entry["adresplaats"])
+        if accommodatie_display == THUIS_CLUBNAAM:
+            location = THUIS_ADRES_VOLLEDIG
+            match_maps_url = THUIS_MAPS_URL
+        else:
+            location = accommodatie_display
+            match_maps_url = maps_url(accommodatie_display, entry["straat"], entry["adresplaats"])
 
         # Titel toont alleen richting + tegenstander, bv. "[UIT] Sparta
         # Nijkerk 45+1 (45+ 7x7)" -- de eigen teamnaam staat al in de
