@@ -10,13 +10,15 @@ naam) in plaats van in de code.
 
 We zoeken elke run opnieuw de teamcode op (stabieler dan poulecode, die
 halverwege het seizoen wisselt als de KNVB een nieuwe competitiefase
-indeelt) en halen daarmee het per-team programma op. Per wedstrijd wordt
+indeelt) en halen daarmee het per-team programma op. Dat bevat naast
+datum/tijd ook de officiele verzameltijd/vertrektijd, scheidsrechter en
+veld -- dus we zetten per wedstrijd, net als bij de JO14-6-variant, twee
+losse agenda-items: "Verzamelen" en de wedstrijd zelf. Per wedstrijd wordt
 ook het adres van de accommodatie opgehaald (wedstrijd-informatie) zodat
 de LOCATION een kant-en-klare Google Maps-link krijgt, in plaats van te
 gokken op basis van de sportparknaam. Alles wordt bijgehouden in
 matches.json zodat wedstrijden niet verdwijnen zodra een fase/poule
-wisselt. In tegenstelling tot de JO14-6-variant worden hier geen aparte
-"Verzamelen"-items aangemaakt.
+wisselt.
 
 Voor VVZ'49's eigen accommodatie wordt in het LOCATION-veld altijd het
 volledige, exacte adres gebruikt (THUIS_ADRES_VOLLEDIG) -- dat is wat
@@ -57,6 +59,8 @@ THUIS_CLUBNAAM = "Sportvereniging Vrienden van Zonnegloren"
 THUIS_STRAAT = "Eemweg 2D"
 THUIS_PLAATS = "3764 DG Soest"
 THUIS_ADRES_VOLLEDIG = f"{THUIS_CLUBNAAM} {THUIS_STRAAT}, {THUIS_PLAATS}, Nederland"
+# Vertrekpunt voor het carpoolen bij uitwedstrijden.
+UIT_VERZAMELPLEK = f"{THUIS_CLUBNAAM} (parkeerplaats), {THUIS_STRAAT}, {THUIS_PLAATS}"
 
 
 def display_accommodatie(naam: str) -> str:
@@ -140,6 +144,8 @@ def merge(state: dict, matches: list[dict], now_iso: str) -> dict:
                 "adresplaats": accommodatie.get("plaats") or "",
                 "status": m.get("status") or "",
                 "wedstrijdnummer": m.get("wedstrijdnummer") or "",
+                "verzameltijd": m.get("verzameltijd") or "",
+                "vertrektijd": m.get("vertrektijd") or "",
                 "scheidsrechter": m.get("scheidsrechter") or "",
             }
         )
@@ -301,6 +307,7 @@ def vevent(uid: str, dtstamp: str, start: date, end: date, summary: str, locatio
 
 
 THUIS_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
+UIT_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
 
 
 def build_ics(state: dict, activiteiten: list[dict], now: datetime) -> str:
@@ -347,6 +354,27 @@ def build_ics(state: dict, activiteiten: list[dict], now: datetime) -> str:
             f"Route: {match_maps_url}" if match_maps_url else "",
         ]
         description = "\n".join(p for p in desc_parts if p)
+
+        # Verzamelen: bij thuiswedstrijden is dat "verzameltijd" (verzamelen in de
+        # kleedkamer op de eigen accommodatie); bij uitwedstrijden publiceert de
+        # KNVB in plaats daarvan een "vertrektijd" (vertrek vanaf de parkeerplaats
+        # van VVZ'49, het vertrekpunt om samen naartoe te rijden).
+        gather_time = entry.get("verzameltijd") if is_thuis else entry.get("vertrektijd")
+        if gather_time and not cancelled:
+            vh, vm = (int(x) for x in gather_time.split(":"))
+            gather_start = kickoff.replace(hour=vh, minute=vm, second=0, microsecond=0)
+            if gather_start < kickoff:
+                gather_location = f"Kleedkamer, {location}" if is_thuis else UIT_VERZAMELPLEK
+                gather_url = match_maps_url if is_thuis else UIT_MAPS_URL
+                lines += vevent(
+                    uid=f"{uid}-verzamelen@{UID_NAMESPACE}",
+                    dtstamp=dtstamp,
+                    start=gather_start,
+                    end=kickoff,
+                    summary=f"Verzamelen: [{richting}] {tegenstander} ({AGENDA_LABEL})",
+                    location=gather_location,
+                    url=gather_url,
+                )
 
         lines += vevent(
             uid=f"{uid}@{UID_NAMESPACE}",
