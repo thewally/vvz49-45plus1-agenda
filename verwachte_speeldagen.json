@@ -1,0 +1,20 @@
+{
+  "_toelichting": "Handmatig bijgehouden lijst van KNVB-speeldagen voor 'Toernooi 7x7 Vrijdag'. scrape.py plaatst voor elke datum in 'speeldagen' die nog GEEN echte Sportlink-wedstrijd heeft een tijdelijk 'nog niet ingepland'-item in de agenda; zodra Sportlink de wedstrijd publiceert, verdwijnt dat item vanzelf. Bij een nieuw seizoen: dit bestand vervangen met de nieuwe kalender.",
+  "bron": "https://www.knvb.nl/downloads/sites/bestand/knvb/29863/speeldagenkalender-veld-west-2026-2027",
+  "kolom": "Toernooi 7x7 Vrijdag, district West I/II, seizoen 2026/'27",
+  "laatst_gecontroleerd": "2026-09-19",
+  "let_op": "De leeftijdscategorie boven deze kolom in de PDF staat als 'O7 t/m O12', maar de losse datumaantekeningen aan het eind van de betreffende rijen (bv. 18/09, 02/10, 13/11) komen exact overeen met de al door Sportlink gepubliceerde 45+1-wedstrijden. De kolom is dus blijkbaar het gedeelde vrijdagavond-7x7-tijdslot, niet leeftijdsgebonden. Data afgeleid uit die rij-aantekeningen, niet uit een schoon leesbare kolom -- bij twijfel naast de PDF leggen.",
+  "speeldagen": [
+    "2026-09-18",
+    "2026-10-02",
+    "2026-10-09",
+    "2026-10-30",
+    "2026-11-13",
+    "2026-11-27",
+    "2027-03-19",
+    "2027-04-02",
+    "2027-04-16",
+    "2027-05-07",
+    "2027-05-21"
+  ]
+}
