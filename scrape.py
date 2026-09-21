@@ -10,36 +10,29 @@ naam) in plaats van in de code.
 
 We zoeken elke run opnieuw de teamcode op (stabieler dan poulecode, die
 halverwege het seizoen wisselt als de KNVB een nieuwe competitiefase
-indeelt) en halen daarmee het per-team programma op. Dat bevat naast
-datum/tijd ook de officiele verzameltijd/vertrektijd, scheidsrechter en
-veld -- dus we zetten per wedstrijd, net als bij de JO14-6-variant, twee
-losse agenda-items: "Verzamelen" en de wedstrijd zelf. Per wedstrijd wordt
+indeelt) en halen daarmee het per-team programma op. Per wedstrijd wordt
 ook het adres van de accommodatie opgehaald (wedstrijd-informatie) zodat
 de LOCATION een kant-en-klare Google Maps-link krijgt, in plaats van te
 gokken op basis van de sportparknaam. Alles wordt bijgehouden in
 matches.json zodat wedstrijden niet verdwijnen zodra een fase/poule
-wisselt.
+wisselt. Daarna wordt matches.ics gegenereerd voor abonnement in Google
+Calendar.
 
-Voor VVZ'49's eigen accommodatie wordt in het LOCATION-veld altijd het
-volledige, exacte adres gebruikt (THUIS_ADRES_VOLLEDIG) -- dat is wat
-Google Calendar (en vermoedelijk andere clients) nodig heeft om er een
-kaartje/foto bij te tonen. Sub-locatie-aanduidingen (bv. "Hoofdveld")
-horen dus niet in het LOCATION-veld, maar worden in de titel getoond --
-zie het optionele "sublocatie"-veld in overige-activiteiten.json.
-
-Daarnaast worden handmatig bijgehouden activiteiten (trainingen,
-toernooien, teamuitjes, ...) uit overige-activiteiten.json toegevoegd.
-Zie README.md voor het formaat. Daarna wordt matches.ics gegenereerd voor
-abonnement in Google Calendar.
+45+1 (7x7) wordt altijd in toernooivorm gespeeld: op een avond speel je
+3 of 4 wedstrijden na elkaar, op dezelfde locatie. Daarom krijgt elke
+avond (datum + accommodatie) precies één "Verzamelen"-item, in plaats
+van een apart item per wedstrijd zoals bij JO14-6. Dat item toont alleen
+of het een uit- of een thuisavond is ("Verzamelen: UIT" / "Verzamelen:
+THUIS") -- THUIS alleen als er die avond bij VVZ'49's eigen accommodatie
+(Sportpark Zonnegloren) gespeeld wordt.
 """
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -48,18 +41,23 @@ CLIENT_ID = os.environ.get("SPORTLINK_CLIENT_ID")
 TEAM_NAME = "VVZ '49 45+1"
 UID_NAMESPACE = "vvz49-45plus1"
 
-# Label achter de wedstrijdtitel, bv. "[UIT] Sparta Nijkerk 45+1 (45+ 7x7)".
-AGENDA_LABEL = "45+ 7x7"
+# Duur van een enkele 45+1-wedstrijd binnen het toernooi (geen 90 minuten
+# zoals bij een reguliere wedstrijd -- de wedstrijden binnen een
+# toernooiavond staan zelf al maar 20-30 minuten uit elkaar).
+MATCH_DUUR_MINUTEN = 20
+
+# Hoeveel minuten voor de eerste wedstrijd van de avond het "Verzamelen"-item
+# begint, als terugvaloptie wanneer er nog geen verzamel-/vertrektijd is
+# ingevuld in Sportlink.
+VERZAMEL_MINUTEN_VOOR_AANVANG = 30
 
 # De KNVB noemt VVZ'49's accommodatie "Sportpark Zonnegloren", maar Google
 # Maps/Calendar herkent de plek -- met foto en kaartje -- pas onder de
-# officiele clubnaam en het exacte adres.
+# officiele clubnaam.
 THUIS_ACCOMMODATIE_KNVB = "Sportpark Zonnegloren"
 THUIS_CLUBNAAM = "Sportvereniging Vrienden van Zonnegloren"
-THUIS_STRAAT = "Eemweg 2D"
-THUIS_PLAATS = "3764 DG Soest"
-THUIS_ADRES_VOLLEDIG = f"{THUIS_CLUBNAAM} {THUIS_STRAAT}, {THUIS_PLAATS}, Nederland"
-# Vertrekpunt voor het carpoolen bij uitwedstrijden.
+THUIS_STRAAT = "Eemweg 1"
+THUIS_PLAATS = "3764DG SOEST"
 UIT_VERZAMELPLEK = f"{THUIS_CLUBNAAM} (parkeerplaats), {THUIS_STRAAT}, {THUIS_PLAATS}"
 
 
@@ -74,8 +72,6 @@ TZ_AMS = ZoneInfo("Europe/Amsterdam")
 
 STATE_PATH = Path(__file__).parent / "matches.json"
 ICS_PATH = Path(__file__).parent / "matches.ics"
-ACTIVITEITEN_PATH = Path(__file__).parent / "overige-activiteiten.json"
-VERWACHTE_SPEELDAGEN_PATH = Path(__file__).parent / "verwachte_speeldagen.json"
 
 
 def api_get(article: str, **params) -> object:
@@ -118,6 +114,9 @@ def maps_url(naam: str, straat: str, plaats: str) -> str:
     return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(query)
 
 
+UIT_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
+
+
 def load_state() -> dict:
     if STATE_PATH.exists():
         return json.loads(STATE_PATH.read_text())
@@ -145,9 +144,9 @@ def merge(state: dict, matches: list[dict], now_iso: str) -> dict:
                 "adresplaats": accommodatie.get("plaats") or "",
                 "status": m.get("status") or "",
                 "wedstrijdnummer": m.get("wedstrijdnummer") or "",
+                "scheidsrechter": m.get("scheidsrechter") or "",
                 "verzameltijd": m.get("verzameltijd") or "",
                 "vertrektijd": m.get("vertrektijd") or "",
-                "scheidsrechter": m.get("scheidsrechter") or "",
             }
         )
         entry["last_seen"] = now_iso
@@ -156,157 +155,17 @@ def merge(state: dict, matches: list[dict], now_iso: str) -> dict:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Overige activiteiten (handmatig, uit overige-activiteiten.json)
-# ---------------------------------------------------------------------------
-
-def fout(msg: str) -> SystemExit:
-    return SystemExit(f"{ACTIVITEITEN_PATH.name}: {msg}")
-
-
-def load_activiteiten() -> list[dict]:
-    if not ACTIVITEITEN_PATH.exists():
-        return []
-    try:
-        data = json.loads(ACTIVITEITEN_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise fout(f"geen geldige JSON ({exc})")
-    if not isinstance(data, list):
-        raise fout("moet een lijst [ ... ] met activiteiten zijn")
-    gezien = set()
-    for act in data:
-        if not isinstance(act, dict):
-            raise fout("elke activiteit moet een object { ... } zijn")
-        act_id = act.get("id")
-        if not act_id or not re.fullmatch(r"[A-Za-z0-9_-]+", str(act_id)):
-            raise fout(f"ongeldig of ontbrekend 'id' bij {act!r} (alleen letters, cijfers, - en _)")
-        if act_id in gezien:
-            raise fout(f"id '{act_id}' komt meerdere keren voor")
-        gezien.add(act_id)
-        if not act.get("titel") or not act.get("datum"):
-            raise fout(f"activiteit '{act_id}' mist 'titel' of 'datum'")
-    return data
-
-
-def load_verwachte_speeldagen() -> list[str]:
-    """Leest de handmatig bijgehouden KNVB-speeldagen uit
-    verwachte_speeldagen.json (zie dat bestand voor toelichting en bron).
-    Ontbreekt het bestand of is het leeg, dan gebeurt er simpelweg niets
-    extra's (geen fout)."""
-    if not VERWACHTE_SPEELDAGEN_PATH.exists():
-        return []
-    try:
-        data = json.loads(VERWACHTE_SPEELDAGEN_PATH.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return []
-    return data.get("speeldagen") or []
-
-
-def activiteit_locatie(act: dict) -> tuple[str, str]:
-    """Bepaalt LOCATION en route-URL voor een overige activiteit. Voor
-    VVZ'49's eigen accommodatie wordt altijd het exacte, volledige adres
-    gebruikt (voor de kaart/foto-herkenning); de sub-locatie (zie
-    activiteit_titel) hoort daar niet bij."""
-    locatie_naam = act.get("locatie") or ""
-    adres = act.get("adres") or ""
-    if locatie_naam == THUIS_CLUBNAAM:
-        return THUIS_ADRES_VOLLEDIG, act.get("url") or THUIS_MAPS_URL
-    locatie = ", ".join(p for p in [locatie_naam, adres] if p)
-    url = act.get("url") or maps_url(locatie_naam, adres, "")
-    return locatie, url
-
-
-def activiteit_titel(act: dict, afgelast: bool) -> str:
-    sublocatie = act.get("sublocatie") or ""
-    titel = f"{act['titel']} ({sublocatie})" if sublocatie else act["titel"]
-    return f"AFGELAST: {titel}" if afgelast else titel
-
-
-def activiteit_events(act: dict, dtstamp: str, cutoff: date, horizon: date) -> list[str]:
-    act_id = act["id"]
-    try:
-        eerste = date.fromisoformat(act["datum"])
-        einddatum = date.fromisoformat(act["einddatum"]) if act.get("einddatum") else eerste
-        tot_str = act.get("herhalen_tot") or act.get("wekelijks_tot")  # wekelijks_tot = oude naam
-        tot = date.fromisoformat(tot_str) if tot_str else None
-        behalve = {date.fromisoformat(d) for d in act.get("behalve", [])}
-        begintijd = time.fromisoformat(act["begintijd"]) if act.get("begintijd") else None
-        eindtijd = time.fromisoformat(act["eindtijd"]) if act.get("eindtijd") else None
-    except (ValueError, TypeError) as exc:
-        raise fout(f"activiteit '{act_id}': ongeldige datum/tijd ({exc}); gebruik JJJJ-MM-DD en UU:MM")
-
-    duur_dagen = (einddatum - eerste).days
-    if duur_dagen < 0:
-        raise fout(f"activiteit '{act_id}': 'einddatum' ligt voor 'datum'")
-    elke_weken = act.get("elke_weken", 1)
-    if not isinstance(elke_weken, int) or isinstance(elke_weken, bool) or elke_weken < 1:
-        raise fout(f"activiteit '{act_id}': 'elke_weken' moet een heel getal >= 1 zijn")
-    # Herhalend zodra er een einddatum voor de reeks of een interval is opgegeven.
-    # Zonder 'herhalen_tot' loopt de reeks door tot 'horizon' (ca. een jaar
-    # vooruit); omdat de feed elke dag opnieuw wordt opgebouwd schuift dat mee.
-    herhalend = tot is not None or "elke_weken" in act
-    if tot is None:
-        tot = horizon if herhalend else eerste
-    elif tot < eerste:
-        raise fout(f"activiteit '{act_id}': 'herhalen_tot' ligt voor 'datum'")
-
-    afgelast = bool(act.get("afgelast"))
-    summary = activiteit_titel(act, afgelast)
-    locatie, url = activiteit_locatie(act)
-    description = "\n".join(p for p in [act.get("omschrijving") or "", f"Route: {url}" if url else ""] if p)
-
-    lines: list[str] = []
-    dag = eerste
-    while dag <= tot:
-        if dag not in behalve and dag + timedelta(days=duur_dagen) >= cutoff:
-            uid = f"activiteit-{act_id}-{dag:%Y%m%d}" if herhalend else f"activiteit-{act_id}"
-            if begintijd:
-                start = datetime.combine(dag, begintijd, TZ_AMS)
-                eind = (datetime.combine(dag + timedelta(days=duur_dagen), eindtijd, TZ_AMS)
-                        if eindtijd else start + timedelta(hours=1))
-                if eind <= start:
-                    raise fout(f"activiteit '{act_id}': eindtijd ligt niet na begintijd")
-            else:
-                # Hele dag; DTEND is bij VALUE=DATE exclusief (dag erna).
-                start = dag
-                eind = dag + timedelta(days=duur_dagen + 1)
-            lines += vevent(
-                uid=f"{uid}@{UID_NAMESPACE}",
-                dtstamp=dtstamp,
-                start=start,
-                end=eind,
-                summary=summary,
-                location=locatie,
-                description=description,
-                url=url,
-                cancelled=afgelast,
-            )
-        dag += timedelta(weeks=elke_weken)
-    return lines
-
-
-# ---------------------------------------------------------------------------
-# ICS
-# ---------------------------------------------------------------------------
-
 def ics_escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
 
-def ics_moment(prop: str, value: date) -> str:
-    # Let op: datetime is een subklasse van date, dus eerst op datetime testen.
-    if isinstance(value, datetime):
-        return f"{prop}:{value.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
-    return f"{prop};VALUE=DATE:{value.strftime('%Y%m%d')}"
-
-
-def vevent(uid: str, dtstamp: str, start: date, end: date, summary: str, location: str = "", description: str = "", url: str = "", cancelled: bool = False) -> list[str]:
+def vevent(uid: str, dtstamp: str, start: datetime, end: datetime, summary: str, location: str = "", description: str = "", url: str = "", cancelled: bool = False) -> list[str]:
     lines = [
         "BEGIN:VEVENT",
         f"UID:{uid}",
         f"DTSTAMP:{dtstamp}",
-        ics_moment("DTSTART", start),
-        ics_moment("DTEND", end),
+        f"DTSTART:{start.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
+        f"DTEND:{end.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
         f"SUMMARY:{ics_escape(summary)}",
     ]
     if location:
@@ -321,13 +180,8 @@ def vevent(uid: str, dtstamp: str, start: date, end: date, summary: str, locatio
     return lines
 
 
-THUIS_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
-UIT_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
-
-
-def build_ics(state: dict, activiteiten: list[dict], now: datetime, verwachte_speeldagen: list[str] | None = None) -> str:
+def build_ics(state: dict, now: datetime) -> str:
     cutoff = (now - timedelta(days=60)).date()
-    horizon = (now + timedelta(days=365)).date()
     dtstamp = now.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = [
         "BEGIN:VCALENDAR",
@@ -336,98 +190,87 @@ def build_ics(state: dict, activiteiten: list[dict], now: datetime, verwachte_sp
         "CALSCALE:GREGORIAN",
         "X-WR-CALNAME:VVZ '49 45+1",
     ]
-    bekende_speeldata: set = set()
-    for uid, entry in sorted(state.items(), key=lambda kv: kv[1]["wedstrijddatum"]):
+
+    # Wedstrijden groeperen per toernooiavond (datum + accommodatie), zodat we
+    # daar per avond precies één "Verzamelen"-item voor kunnen maken.
+    avonden: dict[tuple, list[tuple[str, dict, datetime]]] = {}
+    for uid, entry in state.items():
         kickoff = datetime.fromisoformat(entry["wedstrijddatum"]).astimezone(TZ_AMS)
-        bekende_speeldata.add(kickoff.date())
         if kickoff.date() < cutoff:
             continue
-
-        cancelled = bool(entry["status"]) and "afgelast" in entry["status"].lower()
         accommodatie_display = display_accommodatie(entry["accommodatie"])
-        if accommodatie_display == THUIS_CLUBNAAM:
-            location = THUIS_ADRES_VOLLEDIG
-            match_maps_url = THUIS_MAPS_URL
-        else:
+        key = (kickoff.date(), accommodatie_display)
+        avonden.setdefault(key, []).append((uid, entry, kickoff))
+
+    for (datum, accommodatie_display), wedstrijden in sorted(avonden.items()):
+        wedstrijden.sort(key=lambda t: t[2])
+
+        # "Verzamelen": één keer per avond, alleen UIT of THUIS. De verzameltijd
+        # zelf komt uit Sportlink: Arjen zet die handmatig op de eerste van de
+        # 3/4 wedstrijden die avond (als verzameltijd of vertrektijd, net als
+        # bij JO14-6) -- we zoeken de eerste wedstrijd in de avond waar zo'n
+        # tijd is ingevuld. Is er nog niets ingevuld, dan valt dat terug op de
+        # vaste offset hierboven.
+        niet_afgelast = [w for w in wedstrijden if not ("afgelast" in (w[1]["status"] or "").lower())]
+        if niet_afgelast:
+            _, eerste_entry, eerste_kickoff = niet_afgelast[0]
+            is_thuis = accommodatie_display == THUIS_CLUBNAAM
+
+            verzamel_start = None
+            for _, w_entry, w_kickoff in niet_afgelast:
+                gather_time = w_entry.get("verzameltijd") or w_entry.get("vertrektijd")
+                if gather_time:
+                    vh, vm = (int(x) for x in gather_time.split(":"))
+                    verzamel_start = w_kickoff.replace(hour=vh, minute=vm, second=0, microsecond=0)
+                    break
+            if verzamel_start is None:
+                verzamel_start = eerste_kickoff - timedelta(minutes=VERZAMEL_MINUTEN_VOOR_AANVANG)
+
+            if is_thuis:
+                verzamel_locatie = f"Kleedkamer, {accommodatie_display}"
+                verzamel_url = maps_url(accommodatie_display, eerste_entry["straat"], eerste_entry["adresplaats"])
+            else:
+                verzamel_locatie = UIT_VERZAMELPLEK
+                verzamel_url = UIT_MAPS_URL
+            lines += vevent(
+                uid=f"{datum.isoformat()}-{accommodatie_display}-verzamelen@{UID_NAMESPACE}",
+                dtstamp=dtstamp,
+                start=verzamel_start,
+                end=eerste_kickoff,
+                summary=f"Verzamelen: {'THUIS' if is_thuis else 'UIT'}",
+                location=verzamel_locatie,
+                url=verzamel_url,
+            )
+
+        for uid, entry, kickoff in wedstrijden:
+            cancelled = bool(entry["status"]) and "afgelast" in entry["status"].lower()
             location = accommodatie_display
             match_maps_url = maps_url(accommodatie_display, entry["straat"], entry["adresplaats"])
+            summary = f"{entry['thuisteam']} - {entry['uitteam']}"
+            if cancelled:
+                summary = f"AFGELAST: {summary}"
 
-        # Titel toont alleen richting + tegenstander, bv. "[UIT] Sparta
-        # Nijkerk 45+1 (45+ 7x7)" -- de eigen teamnaam staat al in de
-        # agenda-titel zelf.
-        is_thuis = entry["thuisteam"] == TEAM_NAME
-        richting = "THUIS" if is_thuis else "UIT"
-        tegenstander = entry["uitteam"] if is_thuis else entry["thuisteam"]
-        summary = f"[{richting}] {tegenstander} ({AGENDA_LABEL})"
-        if cancelled:
-            summary = f"AFGELAST: {summary}"
+            desc_parts = [
+                f"Status: {entry['status']}" if entry["status"] else "",
+                f"Veld: {entry['veld']}" if entry["veld"] else "",
+                f"Plaats: {entry['plaats']}" if entry["plaats"] else "",
+                f"Scheidsrechter: {entry['scheidsrechter']}" if entry["scheidsrechter"] else "",
+                f"Wedstrijdnummer: {entry['wedstrijdnummer']}" if entry["wedstrijdnummer"] else "",
+                f"Route: {match_maps_url}" if match_maps_url else "",
+            ]
+            description = "\n".join(p for p in desc_parts if p)
 
-        desc_parts = [
-            f"Status: {entry['status']}" if entry["status"] else "",
-            f"Veld: {entry['veld']}" if entry["veld"] else "",
-            f"Plaats: {entry['plaats']}" if entry["plaats"] else "",
-            f"Scheidsrechter: {entry['scheidsrechter']}" if entry["scheidsrechter"] else "",
-            f"Wedstrijdnummer: {entry['wedstrijdnummer']}" if entry["wedstrijdnummer"] else "",
-            f"Route: {match_maps_url}" if match_maps_url else "",
-        ]
-        description = "\n".join(p for p in desc_parts if p)
-
-        # Verzamelen: bij thuiswedstrijden is dat "verzameltijd" (verzamelen in de
-        # kleedkamer op de eigen accommodatie); bij uitwedstrijden publiceert de
-        # KNVB in plaats daarvan een "vertrektijd" (vertrek vanaf de parkeerplaats
-        # van VVZ'49, het vertrekpunt om samen naartoe te rijden).
-        gather_time = entry.get("verzameltijd") if is_thuis else entry.get("vertrektijd")
-        if gather_time and not cancelled:
-            vh, vm = (int(x) for x in gather_time.split(":"))
-            gather_start = kickoff.replace(hour=vh, minute=vm, second=0, microsecond=0)
-            if gather_start < kickoff:
-                gather_location = f"Kleedkamer, {location}" if is_thuis else UIT_VERZAMELPLEK
-                gather_url = match_maps_url if is_thuis else UIT_MAPS_URL
-                lines += vevent(
-                    uid=f"{uid}-verzamelen@{UID_NAMESPACE}",
-                    dtstamp=dtstamp,
-                    start=gather_start,
-                    end=kickoff,
-                    summary=f"Verzamelen: [{richting}] {tegenstander} ({AGENDA_LABEL})",
-                    location=gather_location,
-                    url=gather_url,
-                )
-
-        lines += vevent(
-            uid=f"{uid}@{UID_NAMESPACE}",
-            dtstamp=dtstamp,
-            start=kickoff,
-            end=kickoff + timedelta(minutes=90),
-            summary=summary,
-            location=location,
-            description=description,
-            url=match_maps_url,
-            cancelled=cancelled,
-        )
-
-    for act in activiteiten:
-        lines += activiteit_events(act, dtstamp, cutoff, horizon)
-
-    # Plaatshouders voor KNVB-speeldagen (zie verwachte_speeldagen.json) die nog
-    # niet door Sportlink zijn ingevuld met een concrete wedstrijd. Zo staat de
-    # dag alvast geblokkeerd in de agenda; zodra Sportlink 'm publiceert (en dus
-    # in bekende_speeldata terechtkomt), verdwijnt de plaatshouder vanzelf.
-    for datum_str in verwachte_speeldagen or []:
-        try:
-            dag = date.fromisoformat(datum_str)
-        except ValueError:
-            continue
-        if dag < cutoff or dag in bekende_speeldata:
-            continue
-        lines += vevent(
-            uid=f"verwacht-{datum_str}@{UID_NAMESPACE}",
-            dtstamp=dtstamp,
-            start=dag,
-            end=dag + timedelta(days=1),
-            summary=f"Speeldag nog niet ingepland ({AGENDA_LABEL})",
-            description="Volgens de KNVB-speeldagenkalender staat hier een wedstrijd "
-                         "gepland, maar Sportlink heeft de tegenstander/tijd nog niet gepubliceerd.",
-        )
+            lines += vevent(
+                uid=f"{uid}@{UID_NAMESPACE}",
+                dtstamp=dtstamp,
+                start=kickoff,
+                end=kickoff + timedelta(minutes=MATCH_DUUR_MINUTEN),
+                summary=summary,
+                location=location,
+                description=description,
+                url=match_maps_url,
+                cancelled=cancelled,
+            )
 
     lines.append("END:VCALENDAR")
     return "\r\n".join(lines) + "\r\n"
@@ -438,29 +281,23 @@ def main() -> int:
         print("SPORTLINK_CLIENT_ID ontbreekt (zet 'm als env var of repository secret).", file=sys.stderr)
         return 1
 
-    # Eerst de activiteiten valideren: een tikfout moet de run duidelijk laten
-    # falen (GitHub stuurt dan een mail) in plaats van stilletjes items te missen.
-    activiteiten = load_activiteiten()
-    verwachte_speeldagen = load_verwachte_speeldagen()
-
     now = datetime.now(TZ_AMS)
-    state = load_state()
     try:
         teamcode = find_teamcode()
         matches = fetch_schedule(teamcode)
-        print(f"Teamcode {teamcode}: {len(matches)} wedstrijd(en) opgehaald.")
-        state = merge(state, matches, now.isoformat())
-        save_state(state)
     except (urllib.error.URLError, RuntimeError) as exc:
-        # Sportlink onbereikbaar: bestaande wedstrijden uit matches.json houden,
-        # maar de agenda wel opnieuw opbouwen zodat gewijzigde activiteiten
-        # toch doorkomen.
-        print(f"Kon programma niet ophalen: {exc} -- bestaande wedstrijden worden gebruikt.", file=sys.stderr)
+        print(f"Kon programma niet ophalen: {exc}", file=sys.stderr)
+        return 0  # laat matches.json/matches.ics ongewijzigd staan
 
-    ics = build_ics(state, activiteiten, now, verwachte_speeldagen)
+    print(f"Teamcode {teamcode}: {len(matches)} wedstrijd(en) opgehaald.")
+
+    state = load_state()
+    state = merge(state, matches, now.isoformat())
+    save_state(state)
+
+    ics = build_ics(state, now)
     ICS_PATH.write_text(ics)
-    print(f"matches.ics geschreven met {ics.count('BEGIN:VEVENT')} agenda-item(en) totaal "
-          f"({len(activiteiten)} overige activiteit(en) in {ACTIVITEITEN_PATH.name}).")
+    print(f"matches.ics geschreven met {ics.count('BEGIN:VEVENT')} agenda-item(en) totaal.")
     return 0
 
 
