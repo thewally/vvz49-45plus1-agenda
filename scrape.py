@@ -58,7 +58,16 @@ THUIS_ACCOMMODATIE_KNVB = "Sportpark Zonnegloren"
 THUIS_CLUBNAAM = "Sportvereniging Vrienden van Zonnegloren"
 THUIS_STRAAT = "Eemweg 1"
 THUIS_PLAATS = "3764DG SOEST"
-UIT_VERZAMELPLEK = f"{THUIS_CLUBNAAM} (parkeerplaats), {THUIS_STRAAT}, {THUIS_PLAATS}"
+
+# Vaste verzamelplek voor uitwedstrijden. Let op: dit is NIET de
+# parkeerplaats van VVZ'49 (dat is de JO14-6-conventie, voor de jeugd die
+# gezamenlijk carpoolt) -- bij 45+1 verzamelt een deel van het team bij
+# Cafe de Kuil in Soest, en rijdt de rest rechtstreeks naar de
+# uitlocatie.
+UIT_KUIL_NAAM = "Cafe de Kuil"
+UIT_KUIL_STRAAT = "Kerkplein 4"
+UIT_KUIL_PLAATS = "3764AW SOEST"
+UIT_VERZAMELPLEK = f"Parkeerplaats {UIT_KUIL_NAAM}, {UIT_KUIL_STRAAT}, {UIT_KUIL_PLAATS}"
 
 
 def display_accommodatie(naam: str) -> str:
@@ -114,7 +123,7 @@ def maps_url(naam: str, straat: str, plaats: str) -> str:
     return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(query)
 
 
-UIT_MAPS_URL = maps_url(THUIS_CLUBNAAM, THUIS_STRAAT, THUIS_PLAATS)
+UIT_MAPS_URL = maps_url(UIT_KUIL_NAAM, UIT_KUIL_STRAAT, UIT_KUIL_PLAATS)
 
 
 def load_state() -> dict:
@@ -229,9 +238,11 @@ def build_ics(state: dict, now: datetime) -> str:
             if is_thuis:
                 verzamel_locatie = f"Kleedkamer, {accommodatie_display}"
                 verzamel_url = maps_url(accommodatie_display, eerste_entry["straat"], eerste_entry["adresplaats"])
+                verzamel_beschrijving = ""
             else:
                 verzamel_locatie = UIT_VERZAMELPLEK
                 verzamel_url = UIT_MAPS_URL
+                verzamel_beschrijving = f"Niet verplicht: sommigen rijden rechtstreeks naar {accommodatie_display}."
             lines += vevent(
                 uid=f"{datum.isoformat()}-{accommodatie_display}-verzamelen@{UID_NAMESPACE}",
                 dtstamp=dtstamp,
@@ -239,6 +250,7 @@ def build_ics(state: dict, now: datetime) -> str:
                 end=eerste_kickoff,
                 summary=f"Verzamelen: {'THUIS' if is_thuis else 'UIT'}",
                 location=verzamel_locatie,
+                description=verzamel_beschrijving,
                 url=verzamel_url,
             )
 
